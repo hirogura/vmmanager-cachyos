@@ -28,6 +28,10 @@ sudo /tmp/install-vmmanager-cachyos.sh
 1. システムパッケージのインストール (`pacman`: python, libvirt, QEMU, edk2-ovmf, swtpm, dnsmasq など)
 2. `libvirtd` サービスの有効化 (+ 既定NATネットワーク `default` の自動起動)
 3. ストレージプールの設定
+   - Btrfs 上では事前に `/opt/vm` をサブボリュームとして作成します
+     (snapper の親スナップショットから除外して肥大化を防ぐ + `chattr +C` / `compression none` で COW・圧縮を無効化し qcow2/raw の断片化を防ぐ)
+     - 既に通常ディレクトリとして存在する場合: 空なら置き換え、非空なら `/opt/vm.bak.YYYYMMDDHHMMSS` に退避してから作成します
+     - ネストしたサブボリュームのため `/etc/fstab` の追記は不要です
    - デフォルトプール `default` を `/opt/vm` に向けます (`/opt/vm` が無ければ作成します)
    - `/iso` ディレクトリが存在する場合は `iso` プールとして追加します
 4. Tailscale のインストール (未導入の場合, `pacman -S tailscale`)

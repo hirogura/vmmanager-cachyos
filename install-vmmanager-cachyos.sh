@@ -51,6 +51,38 @@ virsh net-autostart default >/dev/null 2>&1 || true
 virsh net-start default >/dev/null 2>&1 || true
 
 echo "[3/9] ストレージプールを設定中..."
+VM_DIR="/opt/vm"
+# Btrfs 上では VM イメージ用に /opt/vm をサブボリューム化する。
+# 理由: (1) snapper 等の親スナップショットから除外して肥大化を防ぐ
+#       (2) COW/圧縮を無効化して qcow2/raw の断片化・速度低下を防ぐ
+# ネストしたサブボリュームは fstab 不要で自動的にマウントされる。
+if findmnt -n -o FSTYPE -T /opt 2>/dev/null | grep -qi '^btrfs$' \
+    || stat -f -c %T /opt 2>/dev/null | grep -qi btrfs; then
+    echo "  Btrfs を検出: ${VM_DIR} をサブボリュームとして用意します"
+    if [ -e "${VM_DIR}" ] && ! btrfs subvolume show "${VM_DIR}" >/dev/null 2>&1; then
+        if [ -d "${VM_DIR}" ] && [ -z "$(ls -A "${VM_DIR}" 2>/dev/null)" ]; then
+            echo "  空の通常ディレクトリをサブボリュームに置き換えます"
+            rmdir "${VM_DIR}"
+        elif [ -e "${VM_DIR}" ]; then
+            BACKUP="${VM_DIR}.bak.$(date +%Y%m%d%H%M%S)"
+            echo "  既存の ${VM_DIR} は通常ディレクトリのため ${BACKUP} に退避します"
+            # プールが掴んでいると mv/rmdir できないため先に停止する
+            virsh pool-destroy default >/dev/null 2>&1 || true
+            mv "${VM_DIR}" "${BACKUP}"
+            echo "  退避先: ${BACKUP} (内容確認後に手動で戻すか削除してください)"
+        fi
+    fi
+    if [ ! -e "${VM_DIR}" ]; then
+        btrfs subvolume create "${VM_DIR}"
+    fi
+    # VM イメージは COW・圧縮なしが定石。空の状態で NOCOW 継承フラグを付与する。
+    # 既存ファイルがある場合も以降の新規ファイルには継承される。
+    chattr +C "${VM_DIR}" 2>/dev/null || echo "  警告: chattr +C に失敗しました (COW 無効化をスキップ)"
+    btrfs property set "${VM_DIR}" compression none >/dev/null 2>&1 || true
+    echo "  サブボリューム確認:"
+    btrfs subvolume show "${VM_DIR}" | head -n 8 || true
+    lsattr -d "${VM_DIR}" || true
+fi
 mkdir -p /opt/vm
 # Arch では libvirt グループ、Debian 互換で libvirt-qemu も試す
 if getent group libvirt >/dev/null 2>&1; then

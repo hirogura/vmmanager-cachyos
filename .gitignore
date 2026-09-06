@@ -28,3 +28,6 @@ uploads/
 *.key
 *.p12
 *.pfx
+
+# ランタイム生成物 (VNC ターゲット一覧)
+websockify-targets.cfg
