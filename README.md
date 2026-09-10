@@ -3,6 +3,8 @@
 libvirt / QEMU 上の仮想マシンを Web ブラウザから管理するための Web UI の **CachyOS / Arch Linux 対応版**です。
 上流の [hirogura/vmmanager](https://github.com/hirogura/vmmanager) (Debian/Ubuntu 向け) を CachyOS でもそのままインストールできるようにしたフォークです。
 
+2026/9/10 - Ubuntu版（ https://github.com/hirogura/vmmanager ）と一本化したので、今後はそちらで。 しばらくの間、こちらも残しておきます。
+
 ## 概要
 
 - Python (Flask) + libvirt ベースの Web アプリケーション
